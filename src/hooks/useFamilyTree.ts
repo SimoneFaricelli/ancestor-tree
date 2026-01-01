@@ -30,12 +30,13 @@ export const useFamilyTree = () => {
   const { user } = useAuth();
   const { loadFamilyTree, saveFamilyTree, loading: dbLoading, saving } = useSupabaseFamily();
   const [isInitialized, setIsInitialized] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [state, setState] = useState<FamilyTreeState>(() => {
-    const initialPerson = createInitialPerson();
+    // Inizializziamo con oggetto vuoto, creeremo la persona iniziale solo se necessario
     return {
-      people: { [initialPerson.id]: initialPerson },
+      people: {},
       selectedPersonId: null,
       focusedPersonId: null,
       isSidebarOpen: false,
@@ -55,9 +56,16 @@ export const useFamilyTree = () => {
           ...prev,
           people: loadedPeople,
         }));
+      } else {
+        // Se non ci sono dati nel DB, crea la persona iniziale
+        const initialPerson = createInitialPerson();
+        setState(prev => ({
+          ...prev,
+          people: { [initialPerson.id]: initialPerson },
+        }));
       }
-      // Se non ci sono dati, mantieni la persona iniziale
       
+      setDataLoaded(true);
       setIsInitialized(true);
     };
 
@@ -65,8 +73,9 @@ export const useFamilyTree = () => {
   }, [user, loadFamilyTree, isInitialized]);
 
   // Salva automaticamente su Supabase quando cambiano i dati (con debounce)
+  // MA solo dopo che i dati iniziali sono stati caricati
   useEffect(() => {
-    if (!isInitialized || !user) return;
+    if (!isInitialized || !user || !dataLoaded) return;
 
     // Cancella il timeout precedente
     if (saveTimeoutRef.current) {
@@ -83,7 +92,7 @@ export const useFamilyTree = () => {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [state.people, isInitialized, user, saveFamilyTree]);
+  }, [state.people, isInitialized, user, saveFamilyTree, dataLoaded]);
 
   const selectPerson = useCallback((personId: string | null) => {
     setState(prev => ({
