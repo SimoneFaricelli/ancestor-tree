@@ -85,6 +85,7 @@ export const FamilyCanvas = ({
                     person={person}
                     isSelected={selectedPersonId === person.id}
                     onClick={() => onSelectPerson(person.id)}
+                    isVisible={true}
                   />
                 ))}
               </div>

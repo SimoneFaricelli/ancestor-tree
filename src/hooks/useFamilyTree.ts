@@ -289,6 +289,80 @@ export const useFamilyTree = () => {
     });
   }, []);
 
+  const calculateRelativePositions = useCallback((focusedId: string): Map<string, { x: number; y: number }> => {
+    const { people } = state;
+    const positions = new Map<string, { x: number; y: number }>();
+    const focused = people[focusedId];
+    if (!focused) return positions;
+
+    const centerX = 1500;
+    const centerY = 1000;
+    const horizontalGap = TILE_WIDTH + HORIZONTAL_GAP;
+    const verticalGap = TILE_HEIGHT + VERTICAL_GAP;
+
+    // Set focused person at center
+    positions.set(focusedId, { x: centerX, y: centerY });
+
+    // Position partners to the left
+    focused.partnerIds.forEach((partnerId, index) => {
+      positions.set(partnerId, {
+        x: centerX - horizontalGap * (index + 1),
+        y: centerY,
+      });
+    });
+
+    // Position siblings to the right
+    focused.siblingIds.forEach((siblingId, index) => {
+      positions.set(siblingId, {
+        x: centerX + horizontalGap * (index + 1),
+        y: centerY,
+      });
+    });
+
+    // Position ancestors upward
+    const positionAncestors = (personId: string, level: number, baseX: number) => {
+      const person = people[personId];
+      if (!person) return;
+
+      const parentIds = person.parentIds;
+      const parentCount = parentIds.length;
+      const startX = baseX - ((parentCount - 1) * horizontalGap) / 2;
+
+      parentIds.forEach((parentId, index) => {
+        if (!positions.has(parentId)) {
+          const x = startX + index * horizontalGap;
+          const y = centerY - verticalGap * level;
+          positions.set(parentId, { x, y });
+          positionAncestors(parentId, level + 1, x);
+        }
+      });
+    };
+
+    // Position descendants downward
+    const positionDescendants = (personId: string, level: number, baseX: number) => {
+      const person = people[personId];
+      if (!person) return;
+
+      const childIds = person.childrenIds;
+      const childCount = childIds.length;
+      const startX = baseX - ((childCount - 1) * horizontalGap) / 2;
+
+      childIds.forEach((childId, index) => {
+        if (!positions.has(childId)) {
+          const x = startX + index * horizontalGap;
+          const y = centerY + verticalGap * level;
+          positions.set(childId, { x, y });
+          positionDescendants(childId, level + 1, x);
+        }
+      });
+    };
+
+    positionAncestors(focusedId, 1, centerX);
+    positionDescendants(focusedId, 1, centerX);
+
+    return positions;
+  }, [state]);
+
   const getVisiblePeople = useCallback((): Person[] => {
     const { people, focusedPersonId } = state;
     
@@ -334,8 +408,19 @@ export const useFamilyTree = () => {
     // Add partners
     focused.partnerIds.forEach(id => visibleIds.add(id));
 
-    return Object.values(people).filter(p => visibleIds.has(p.id));
-  }, [state]);
+    // Calculate new positions based on focused person
+    const positions = calculateRelativePositions(focusedPersonId);
+
+    return Object.values(people)
+      .filter(p => visibleIds.has(p.id))
+      .map(p => {
+        const pos = positions.get(p.id);
+        if (pos) {
+          return { ...p, x: pos.x, y: pos.y };
+        }
+        return p;
+      });
+  }, [state, calculateRelativePositions]);
 
   const getConnections = useCallback((): Array<{
     from: Person;
