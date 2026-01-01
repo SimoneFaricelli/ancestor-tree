@@ -28,12 +28,14 @@ export function useSupabaseFamily() {
   // Carica l'albero genealogico dal database
   const loadFamilyTree = useCallback(async (): Promise<Record<string, Person> | null> => {
     if (!user) {
+      console.log('❌ [DB] Nessun utente loggato');
       setLoading(false);
       return null;
     }
 
     try {
       setLoading(true);
+      console.log('🔍 [DB] Query database per user_id:', user.id);
       const { data, error } = await supabase
         .from('ancestor_trees')
         .select('*')
@@ -43,19 +45,23 @@ export function useSupabaseFamily() {
       if (error) {
         // Se non esiste ancora un albero, ritorna null (verrà creato al primo salvataggio)
         if (error.code === 'PGRST116') {
+          console.log('⚠️ [DB] Nessun record trovato nel database (codice PGRST116)');
           return null;
         }
+        console.error('❌ [DB] Errore query:', error);
         throw error;
       }
 
       if (data) {
+        console.log('✅ [DB] Record trovato! ID:', data.id, '| Persone nel record:', data.people ? Object.keys(data.people).length : 0);
         setTreeId(data.id);
         return data.people || {};
       }
 
+      console.log('⚠️ [DB] Data è null');
       return null;
     } catch (error: any) {
-      console.error('Errore caricamento albero:', error);
+      console.error('❌ [DB] Errore caricamento albero:', error);
       return null;
     } finally {
       setLoading(false);
@@ -68,9 +74,11 @@ export function useSupabaseFamily() {
 
     try {
       setSaving(true);
+      console.log('💾 [DB] Inizio salvataggio. TreeId:', treeId, '| Persone da salvare:', Object.keys(people).length);
 
       // Se abbiamo già un treeId, aggiorna
       if (treeId) {
+        console.log('📝 [DB] UPDATE record esistente:', treeId);
         const { error } = await supabase
           .from('ancestor_trees')
           .update({
@@ -81,8 +89,10 @@ export function useSupabaseFamily() {
           .eq('user_id', user.id);
 
         if (error) throw error;
+        console.log('✅ [DB] Record aggiornato con successo');
       } else {
         // Prima controlla se esiste già un record per questo utente
+        console.log('🔍 [DB] Controllo se esiste già un record per questo utente');
         const { data: existingTree, error: checkError } = await supabase
           .from('ancestor_trees')
           .select('id')
@@ -95,6 +105,7 @@ export function useSupabaseFamily() {
 
         if (existingTree) {
           // Esiste già, aggiorna quello
+          console.log('📝 [DB] Record esistente trovato, UPDATE:', existingTree.id);
           setTreeId(existingTree.id);
           const { error } = await supabase
             .from('ancestor_trees')
@@ -106,8 +117,10 @@ export function useSupabaseFamily() {
             .eq('user_id', user.id);
 
           if (error) throw error;
+          console.log('✅ [DB] Record aggiornato con successo');
         } else {
           // Non esiste, crea un nuovo albero
+          console.log('➕ [DB] Nessun record esistente, INSERT nuovo');
           const { data, error } = await supabase
             .from('ancestor_trees')
             .insert({
@@ -120,6 +133,7 @@ export function useSupabaseFamily() {
 
           if (error) throw error;
           if (data) {
+            console.log('✅ [DB] Nuovo record creato con ID:', data.id);
             setTreeId(data.id);
           }
         }
