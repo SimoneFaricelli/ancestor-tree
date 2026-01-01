@@ -30,6 +30,7 @@ export interface FamilyTreeState {
   people: Record<string, Person>;
   selectedPersonId: string | null;
   focusedPersonId: string | null;
+  isSidebarOpen: boolean;
 }
 
 export type RelationshipType = 'parent' | 'child' | 'sibling' | 'partner';

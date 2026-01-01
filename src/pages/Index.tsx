@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { useFamilyTree } from '@/hooks/useFamilyTree';
 import { FamilyCanvas } from '@/components/FamilyCanvas';
 import { PersonSidebar } from '@/components/PersonSidebar';
-import { TreePine, Users, Download, Upload } from 'lucide-react';
+import { TreePine, Users, Download, Upload, PanelRight, PanelRightClose } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -12,6 +12,7 @@ const Index = () => {
     state,
     selectedPerson,
     selectPerson,
+    toggleSidebar,
     closeSidebar,
     updatePerson,
     addMetaItem,
@@ -108,6 +109,26 @@ const Index = () => {
             <Users className="w-4 h-4" />
             <span>{Object.keys(state.people).length} persone</span>
           </div>
+          <Button
+            variant={state.isSidebarOpen ? "default" : "outline"}
+            size="sm"
+            onClick={toggleSidebar}
+            className="gap-2"
+            disabled={!state.selectedPersonId}
+            title={state.isSidebarOpen ? "Chiudi pannello" : "Apri pannello"}
+          >
+            {state.isSidebarOpen ? (
+              <>
+                <PanelRightClose className="w-4 h-4" />
+                Chiudi
+              </>
+            ) : (
+              <>
+                <PanelRight className="w-4 h-4" />
+                Dettagli
+              </>
+            )}
+          </Button>
         </div>
       </header>
 
@@ -126,7 +147,7 @@ const Index = () => {
       {selectedPerson && (
         <PersonSidebar
           person={selectedPerson}
-          isOpen={!!selectedPerson}
+          isOpen={state.isSidebarOpen}
           onClose={closeSidebar}
           onUpdatePerson={(updates) => updatePerson(selectedPerson.id, updates)}
           onAddMeta={(key, value) => addMetaItem(selectedPerson.id, key, value)}
@@ -140,7 +161,7 @@ const Index = () => {
       )}
 
       {/* Overlay when sidebar is open */}
-      {selectedPerson && (
+      {selectedPerson && state.isSidebarOpen && (
         <div
           className="fixed inset-0 bg-background/50 backdrop-blur-sm z-40 lg:hidden"
           onClick={closeSidebar}

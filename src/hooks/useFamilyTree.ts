@@ -31,6 +31,7 @@ export const useFamilyTree = () => {
       people: { [initialPerson.id]: initialPerson },
       selectedPersonId: null,
       focusedPersonId: null,
+      isSidebarOpen: false,
     };
   });
 
@@ -39,14 +40,28 @@ export const useFamilyTree = () => {
       ...prev,
       selectedPersonId: personId,
       focusedPersonId: personId,
+      // NON apriamo più automaticamente la sidebar
+    }));
+  }, []);
+
+  const toggleSidebar = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      isSidebarOpen: !prev.isSidebarOpen,
+    }));
+  }, []);
+
+  const openSidebar = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      isSidebarOpen: true,
     }));
   }, []);
 
   const closeSidebar = useCallback(() => {
     setState(prev => ({
       ...prev,
-      selectedPersonId: null,
-      // Manteniamo focusedPersonId per mantenere la visualizzazione corrente
+      isSidebarOpen: false,
     }));
   }, []);
 
@@ -656,6 +671,7 @@ export const useFamilyTree = () => {
         people: importedPeople,
         selectedPersonId: null,
         focusedPersonId: null,
+        isSidebarOpen: false,
       });
       return true;
     } catch (error) {
@@ -669,6 +685,8 @@ export const useFamilyTree = () => {
     people: state.people,
     selectedPerson: state.selectedPersonId ? state.people[state.selectedPersonId] : null,
     selectPerson,
+    toggleSidebar,
+    openSidebar,
     closeSidebar,
     updatePerson,
     addMetaItem,
