@@ -1,16 +1,37 @@
 import { Person } from '@/types/FamilyTree';
 import { User } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useEffect, useState } from 'react';
 
 interface PersonTileProps {
   person: Person;
   isSelected: boolean;
   onClick: () => void;
+  isVisible: boolean;
 }
 
-export const PersonTile = ({ person, isSelected, onClick }: PersonTileProps) => {
+export const PersonTile = ({ person, isSelected, onClick, isVisible }: PersonTileProps) => {
+  const [shouldRender, setShouldRender] = useState(isVisible);
+  const [animationClass, setAnimationClass] = useState('');
   const isMale = person.gender === 'male';
   
+  useEffect(() => {
+    if (isVisible) {
+      setShouldRender(true);
+      // Small delay to trigger enter animation
+      requestAnimationFrame(() => {
+        setAnimationClass('animate-tile-enter');
+      });
+    } else {
+      setAnimationClass('animate-tile-exit');
+      // Wait for exit animation to complete before unmounting
+      const timer = setTimeout(() => {
+        setShouldRender(false);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isVisible]);
+
   const formatDate = (date: string) => {
     if (!date) return '';
     const d = new Date(date);
@@ -21,16 +42,19 @@ export const PersonTile = ({ person, isSelected, onClick }: PersonTileProps) => 
   const deathYear = person.deathDate ? formatDate(person.deathDate) : null;
   const lifespan = birthYear ? (deathYear ? `${birthYear} - ${deathYear}` : `${birthYear}`) : '';
 
+  if (!shouldRender) return null;
+
   return (
     <div
       onClick={onClick}
       className={cn(
-        'absolute w-40 h-24 rounded-xl cursor-pointer transition-all duration-300',
+        'absolute w-40 h-24 rounded-xl cursor-pointer',
         'flex flex-col items-center justify-center p-3 gap-1',
         'shadow-lg backdrop-blur-sm border border-foreground/10',
         isMale ? 'tile-male' : 'tile-female',
         isSelected && 'tile-selected animate-pulse-glow',
-        'tile-hover'
+        'tile-hover',
+        animationClass
       )}
       style={{
         left: person.x,
