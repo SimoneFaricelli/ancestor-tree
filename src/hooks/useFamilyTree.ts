@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Person, Gender, FamilyTreeState, RelationshipType, MetaItem } from '@/types/FamilyTree';
+import { importFamilyTree, downloadFamilyTreeJson } from '@/utils/familyTreeExport';
 
 const TILE_WIDTH = 160;
 const TILE_HEIGHT = 100;
@@ -385,6 +386,25 @@ export const useFamilyTree = () => {
     return connections;
   }, [state, getVisiblePeople]);
 
+  const exportTree = useCallback(() => {
+    downloadFamilyTreeJson(state.people);
+  }, [state.people]);
+
+  const importTree = useCallback((jsonString: string) => {
+    try {
+      const importedPeople = importFamilyTree(jsonString);
+      setState({
+        people: importedPeople,
+        selectedPersonId: null,
+        focusedPersonId: null,
+      });
+      return true;
+    } catch (error) {
+      console.error('Import failed:', error);
+      return false;
+    }
+  }, []);
+
   return {
     state,
     people: state.people,
@@ -398,5 +418,7 @@ export const useFamilyTree = () => {
     deletePerson,
     getVisiblePeople,
     getConnections,
+    exportTree,
+    importTree,
   };
 };

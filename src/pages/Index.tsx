@@ -1,9 +1,13 @@
+import { useRef } from 'react';
 import { useFamilyTree } from '@/hooks/useFamilyTree';
 import { FamilyCanvas } from '@/components/FamilyCanvas';
 import { PersonSidebar } from '@/components/PersonSidebar';
-import { TreePine, Users } from 'lucide-react';
+import { TreePine, Users, Download, Upload } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 const Index = () => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const {
     state,
     selectedPerson,
@@ -16,13 +20,55 @@ const Index = () => {
     deletePerson,
     getVisiblePeople,
     getConnections,
+    exportTree,
+    importTree,
   } = useFamilyTree();
 
   const visiblePeople = getVisiblePeople();
   const connections = getConnections();
 
+  const handleExport = () => {
+    exportTree();
+    toast.success('Albero genealogico esportato!');
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      const success = importTree(content);
+      if (success) {
+        toast.success('Albero genealogico importato!');
+      } else {
+        toast.error('Errore durante l\'importazione');
+      }
+    };
+    reader.readAsText(file);
+    
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {/* Hidden file input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept=".json"
+        className="hidden"
+      />
+
       {/* Header */}
       <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm flex items-center justify-between px-6 z-40">
         <div className="flex items-center gap-3">
@@ -36,9 +82,31 @@ const Index = () => {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Users className="w-4 h-4" />
-          <span>{Object.keys(state.people).length} persone</span>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleImportClick}
+              className="gap-2"
+            >
+              <Upload className="w-4 h-4" />
+              Importa
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              className="gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Esporta
+            </Button>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Users className="w-4 h-4" />
+            <span>{Object.keys(state.people).length} persone</span>
+          </div>
         </div>
       </header>
 
