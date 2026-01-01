@@ -784,7 +784,7 @@ export const useFamilyTree = () => {
     state,
     people: state.people,
     selectedPerson: state.selectedPersonId ? state.people[state.selectedPersonId] : null,
-    loading: dbLoading || !isInitialized,
+    loading: dbLoading || !isInitialized || Object.keys(state.people).length === 0,
     saving,
     selectPerson,
     toggleSidebar,
