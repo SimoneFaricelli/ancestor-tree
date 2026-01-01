@@ -458,41 +458,65 @@ export const useFamilyTree = () => {
     // Set focused person at center
     positions.set(focusedId, { x: centerX, y: centerY });
 
-    // Position partners to the left (centrati se sono più di uno)
+    // Position partners to the left con spaziatura dinamica
     if (focused.partnerIds.length > 0) {
       const partnerCount = focused.partnerIds.length;
-      const partnerTotalSpan = (partnerCount - 1) * horizontalGap;
-      let partnerX = centerX - horizontalGap - partnerTotalSpan / 2;
+      
+      // Calcola la larghezza di ogni partner (considerando i loro antenati)
+      const partnerWidths = focused.partnerIds.map(partnerId => calculateAncestorWidth(partnerId));
+      const totalPartnerWidth = partnerWidths.reduce((sum, w) => sum + w, 0);
+      
+      // Calcola la spaziatura dinamica basata sulla larghezza dei sotto-alberi
+      const partnerSpacing = minSpacing * Math.max(1, totalPartnerWidth / partnerCount);
+      
+      // Calcola la posizione di partenza per centrare i partner
+      const partnerTotalSpan = (partnerCount - 1) * partnerSpacing;
+      let currentPartnerX = centerX - horizontalGap - partnerTotalSpan / 2;
       
       focused.partnerIds.forEach((partnerId, index) => {
+        const partnerWidth = partnerWidths[index];
+        const thisPartnerSpacing = partnerSpacing * (partnerWidth / Math.max(1, totalPartnerWidth / partnerCount));
+        
         positions.set(partnerId, {
-          x: partnerX,
+          x: currentPartnerX,
           y: centerY,
         });
         
         // Posiziona gli antenati di ogni partner
-        positionAncestors(partnerId, partnerX, 1);
+        positionAncestors(partnerId, currentPartnerX, 1);
         
-        partnerX += horizontalGap;
+        currentPartnerX += thisPartnerSpacing;
       });
     }
 
-    // Position siblings to the right (centrati se sono più di uno)
+    // Position siblings to the right con spaziatura dinamica
     if (focused.siblingIds.length > 0) {
       const siblingCount = focused.siblingIds.length;
-      const siblingTotalSpan = (siblingCount - 1) * horizontalGap;
-      let siblingX = centerX + horizontalGap - siblingTotalSpan / 2;
+      
+      // Calcola la larghezza di ogni fratello (considerando i loro discendenti)
+      const siblingWidths = focused.siblingIds.map(siblingId => calculateDescendantWidth(siblingId));
+      const totalSiblingWidth = siblingWidths.reduce((sum, w) => sum + w, 0);
+      
+      // Calcola la spaziatura dinamica basata sulla larghezza dei sotto-alberi
+      const siblingSpacing = minSpacing * Math.max(1, totalSiblingWidth / siblingCount);
+      
+      // Calcola la posizione di partenza per centrare i fratelli
+      const siblingTotalSpan = (siblingCount - 1) * siblingSpacing;
+      let currentSiblingX = centerX + horizontalGap - siblingTotalSpan / 2;
       
       focused.siblingIds.forEach((siblingId, index) => {
+        const siblingWidth = siblingWidths[index];
+        const thisSiblingSpacing = siblingSpacing * (siblingWidth / Math.max(1, totalSiblingWidth / siblingCount));
+        
         positions.set(siblingId, {
-          x: siblingX,
+          x: currentSiblingX,
           y: centerY,
         });
         
         // Posiziona i discendenti di ogni fratello/sorella
-        positionDescendants(siblingId, siblingX, 1);
+        positionDescendants(siblingId, currentSiblingX, 1);
         
-        siblingX += horizontalGap;
+        currentSiblingX += thisSiblingSpacing;
       });
     }
 
