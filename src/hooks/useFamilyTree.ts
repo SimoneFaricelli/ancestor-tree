@@ -386,19 +386,20 @@ export const useFamilyTree = () => {
       const parentWidths = parentIds.map(parentId => calculateAncestorWidth(parentId));
       const totalWidth = parentWidths.reduce((sum, w) => sum + w, 0);
       
-      // Calcola la spaziatura dinamica basata sulla larghezza dei sotto-alberi
-      const spacing = minSpacing * Math.max(1, totalWidth / parentCount);
+      // Spazio totale necessario: somma delle larghezze * minSpacing
+      const totalSpaceNeeded = totalWidth * minSpacing;
 
       // Calcola la posizione di partenza per centrare i genitori rispetto al figlio
-      const totalSpan = (parentCount - 1) * spacing;
-      let currentX = childX - totalSpan / 2;
+      let currentX = childX - totalSpaceNeeded / 2;
 
       parentIds.forEach((parentId, index) => {
         if (!positions.has(parentId)) {
           const parentWidth = parentWidths[index];
-          const parentSpacing = spacing * (parentWidth / Math.max(1, totalWidth / parentCount));
+          // Lo spazio occupato da questo genitore è proporzionale alla sua larghezza
+          const parentSpace = parentWidth * minSpacing;
           
-          const x = currentX;
+          // Posiziona il genitore al centro del suo spazio
+          const x = currentX + parentSpace / 2;
           const y = centerY - verticalGap * level;
           
           positions.set(parentId, { x, y });
@@ -407,7 +408,7 @@ export const useFamilyTree = () => {
           positionAncestors(parentId, x, level + 1);
           
           // Aggiorna la posizione X per il prossimo genitore
-          currentX += parentSpacing;
+          currentX += parentSpace;
         }
       });
     };
@@ -429,19 +430,20 @@ export const useFamilyTree = () => {
       const childWidths = childIds.map(childId => calculateDescendantWidth(childId));
       const totalWidth = childWidths.reduce((sum, w) => sum + w, 0);
       
-      // Calcola la spaziatura dinamica basata sulla larghezza dei sotto-alberi
-      const spacing = minSpacing * Math.max(1, totalWidth / childCount);
+      // Spazio totale necessario: somma delle larghezze * minSpacing
+      const totalSpaceNeeded = totalWidth * minSpacing;
 
       // Calcola la posizione di partenza per centrare i figli rispetto al genitore
-      const totalSpan = (childCount - 1) * spacing;
-      let currentX = parentX - totalSpan / 2;
+      let currentX = parentX - totalSpaceNeeded / 2;
 
       childIds.forEach((childId, index) => {
         if (!positions.has(childId)) {
           const childWidth = childWidths[index];
-          const childSpacing = spacing * (childWidth / Math.max(1, totalWidth / childCount));
+          // Lo spazio occupato da questo figlio è proporzionale alla sua larghezza
+          const childSpace = childWidth * minSpacing;
           
-          const x = currentX;
+          // Posiziona il figlio al centro del suo spazio
+          const x = currentX + childSpace / 2;
           const y = centerY + verticalGap * level;
           
           positions.set(childId, { x, y });
@@ -450,7 +452,7 @@ export const useFamilyTree = () => {
           positionDescendants(childId, x, level + 1);
           
           // Aggiorna la posizione X per il prossimo figlio
-          currentX += childSpacing;
+          currentX += childSpace;
         }
       });
     };
@@ -466,26 +468,28 @@ export const useFamilyTree = () => {
       const partnerWidths = focused.partnerIds.map(partnerId => calculateAncestorWidth(partnerId));
       const totalPartnerWidth = partnerWidths.reduce((sum, w) => sum + w, 0);
       
-      // Calcola la spaziatura dinamica basata sulla larghezza dei sotto-alberi
-      const partnerSpacing = minSpacing * Math.max(1, totalPartnerWidth / partnerCount);
+      // Spazio totale necessario per tutti i partner
+      const totalSpaceNeeded = totalPartnerWidth * minSpacing;
       
-      // Calcola la posizione di partenza per centrare i partner
-      const partnerTotalSpan = (partnerCount - 1) * partnerSpacing;
-      let currentPartnerX = centerX - horizontalGap - partnerTotalSpan / 2;
+      // Posiziona i partner a sinistra del centro, centrati come gruppo
+      let currentPartnerX = centerX - horizontalGap - totalSpaceNeeded;
       
       focused.partnerIds.forEach((partnerId, index) => {
         const partnerWidth = partnerWidths[index];
-        const thisPartnerSpacing = partnerSpacing * (partnerWidth / Math.max(1, totalPartnerWidth / partnerCount));
+        const partnerSpace = partnerWidth * minSpacing;
+        
+        // Posiziona il partner al centro del suo spazio
+        const x = currentPartnerX + partnerSpace / 2;
         
         positions.set(partnerId, {
-          x: currentPartnerX,
+          x,
           y: centerY,
         });
         
         // Posiziona gli antenati di ogni partner
-        positionAncestors(partnerId, currentPartnerX, 1);
+        positionAncestors(partnerId, x, 1);
         
-        currentPartnerX += thisPartnerSpacing;
+        currentPartnerX += partnerSpace;
       });
     }
 
@@ -497,26 +501,28 @@ export const useFamilyTree = () => {
       const siblingWidths = focused.siblingIds.map(siblingId => calculateDescendantWidth(siblingId));
       const totalSiblingWidth = siblingWidths.reduce((sum, w) => sum + w, 0);
       
-      // Calcola la spaziatura dinamica basata sulla larghezza dei sotto-alberi
-      const siblingSpacing = minSpacing * Math.max(1, totalSiblingWidth / siblingCount);
+      // Spazio totale necessario per tutti i fratelli
+      const totalSpaceNeeded = totalSiblingWidth * minSpacing;
       
-      // Calcola la posizione di partenza per centrare i fratelli
-      const siblingTotalSpan = (siblingCount - 1) * siblingSpacing;
-      let currentSiblingX = centerX + horizontalGap - siblingTotalSpan / 2;
+      // Posiziona i fratelli a destra del centro
+      let currentSiblingX = centerX + horizontalGap;
       
       focused.siblingIds.forEach((siblingId, index) => {
         const siblingWidth = siblingWidths[index];
-        const thisSiblingSpacing = siblingSpacing * (siblingWidth / Math.max(1, totalSiblingWidth / siblingCount));
+        const siblingSpace = siblingWidth * minSpacing;
+        
+        // Posiziona il fratello al centro del suo spazio
+        const x = currentSiblingX + siblingSpace / 2;
         
         positions.set(siblingId, {
-          x: currentSiblingX,
+          x,
           y: centerY,
         });
         
         // Posiziona i discendenti di ogni fratello/sorella
-        positionDescendants(siblingId, currentSiblingX, 1);
+        positionDescendants(siblingId, x, 1);
         
-        currentSiblingX += thisSiblingSpacing;
+        currentSiblingX += siblingSpace;
       });
     }
 
