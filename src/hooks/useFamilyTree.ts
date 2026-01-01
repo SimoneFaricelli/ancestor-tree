@@ -42,6 +42,14 @@ export const useFamilyTree = () => {
     }));
   }, []);
 
+  const closeSidebar = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      selectedPersonId: null,
+      // Manteniamo focusedPersonId per mantenere la visualizzazione corrente
+    }));
+  }, []);
+
   const updatePerson = useCallback((personId: string, updates: Partial<Person>) => {
     setState(prev => ({
       ...prev,
@@ -631,6 +639,7 @@ export const useFamilyTree = () => {
     people: state.people,
     selectedPerson: state.selectedPersonId ? state.people[state.selectedPersonId] : null,
     selectPerson,
+    closeSidebar,
     updatePerson,
     addMetaItem,
     updateMetaItem,

@@ -12,6 +12,7 @@ const Index = () => {
     state,
     selectedPerson,
     selectPerson,
+    closeSidebar,
     updatePerson,
     addMetaItem,
     updateMetaItem,
@@ -126,7 +127,7 @@ const Index = () => {
         <PersonSidebar
           person={selectedPerson}
           isOpen={!!selectedPerson}
-          onClose={() => selectPerson(null)}
+          onClose={closeSidebar}
           onUpdatePerson={(updates) => updatePerson(selectedPerson.id, updates)}
           onAddMeta={(key, value) => addMetaItem(selectedPerson.id, key, value)}
           onUpdateMeta={(metaId, key, value) =>
@@ -142,7 +143,7 @@ const Index = () => {
       {selectedPerson && (
         <div
           className="fixed inset-0 bg-background/50 backdrop-blur-sm z-40 lg:hidden"
-          onClick={() => selectPerson(null)}
+          onClick={closeSidebar}
         />
       )}
 
