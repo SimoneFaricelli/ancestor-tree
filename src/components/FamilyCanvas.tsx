@@ -1,9 +1,10 @@
-import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import { TransformWrapper, TransformComponent, ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
 import { PersonTile } from './PersonTile';
 import { ConnectionLines } from './ConnectionLines';
 import { Person } from '@/types/FamilyTree';
-import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, RefreshCw, Crosshair } from 'lucide-react';
 import { Button } from './ui/button';
+import { useRef, useEffect } from 'react';
 
 interface FamilyCanvasProps {
   people: Person[];
@@ -15,6 +16,7 @@ interface FamilyCanvasProps {
   selectedPersonId: string | null;
   focusedPersonId: string | null;
   onSelectPerson: (personId: string) => void;
+  onRefresh?: () => void;
 }
 
 export const FamilyCanvas = ({
@@ -23,13 +25,46 @@ export const FamilyCanvas = ({
   selectedPersonId,
   focusedPersonId,
   onSelectPerson,
+  onRefresh,
 }: FamilyCanvasProps) => {
+  const transformRef = useRef<ReactZoomPanPinchRef>(null);
+
+  const handleCenterOnSelected = () => {
+    if (!focusedPersonId || !transformRef.current) return;
+    const selectedPerson = people.find(p => p.id === focusedPersonId);
+    if (!selectedPerson) return;
+
+    const { setTransform } = transformRef.current;
+    // Center the view on the selected person
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight - 64; // minus header
+    const scale = 1;
+    const x = -(selectedPerson.x - viewportWidth / 2);
+    const y = -(selectedPerson.y - viewportHeight / 2);
+    setTransform(x, y, scale, 300);
+  };
+
+  const handleRefresh = () => {
+    if (transformRef.current) {
+      transformRef.current.resetTransform();
+    }
+    onRefresh?.();
+  };
+
+  // Center on selected when focusedPersonId changes
+  useEffect(() => {
+    if (focusedPersonId) {
+      setTimeout(() => handleCenterOnSelected(), 100);
+    }
+  }, [focusedPersonId]);
+
   return (
     <div className="w-full h-full canvas-background relative overflow-hidden">
       <TransformWrapper
+        ref={transformRef}
         initialScale={1}
-        minScale={0.3}
-        maxScale={2}
+        minScale={0.1}
+        maxScale={3}
         limitToBounds={false}
         initialPositionX={-800}
         initialPositionY={-500}
@@ -62,6 +97,25 @@ export const FamilyCanvas = ({
               >
                 <RotateCcw className="w-4 h-4" />
               </Button>
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={handleRefresh}
+                className="bg-card/80 backdrop-blur-sm hover:bg-card"
+                title="Refresh canvas"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={handleCenterOnSelected}
+                className="bg-card/80 backdrop-blur-sm hover:bg-card"
+                title="Centra sulla tile selezionata"
+                disabled={!focusedPersonId}
+              >
+                <Crosshair className="w-4 h-4" />
+              </Button>
             </div>
 
             <TransformComponent
@@ -70,8 +124,8 @@ export const FamilyCanvas = ({
                 height: '100%',
               }}
               contentStyle={{
-                width: '3000px',
-                height: '2000px',
+                width: '6000px',
+                height: '4000px',
               }}
             >
               <div className="relative w-full h-full">
