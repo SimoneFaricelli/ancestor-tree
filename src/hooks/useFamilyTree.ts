@@ -1,7 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Person, Gender, FamilyTreeState, RelationshipType, MetaItem } from '@/types/FamilyTree';
 import { importFamilyTree, downloadFamilyTreeJson } from '@/utils/familyTreeExport';
+import { useSupabaseFamily } from './useSupabaseFamily';
+import { useAuth } from './useAuth';
 
 const TILE_WIDTH = 160;
 const TILE_HEIGHT = 100;
@@ -25,6 +27,11 @@ const createInitialPerson = (): Person => ({
 });
 
 export const useFamilyTree = () => {
+  const { user } = useAuth();
+  const { loadFamilyTree, saveFamilyTree, loading: dbLoading, saving } = useSupabaseFamily();
+  const [isInitialized, setIsInitialized] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const [state, setState] = useState<FamilyTreeState>(() => {
     const initialPerson = createInitialPerson();
     return {
@@ -34,6 +41,49 @@ export const useFamilyTree = () => {
       isSidebarOpen: false,
     };
   });
+
+  // Carica i dati da Supabase all'avvio
+  useEffect(() => {
+    if (!user || isInitialized) return;
+
+    const loadData = async () => {
+      const loadedPeople = await loadFamilyTree();
+      
+      if (loadedPeople && Object.keys(loadedPeople).length > 0) {
+        // Carica i dati dal database
+        setState(prev => ({
+          ...prev,
+          people: loadedPeople,
+        }));
+      }
+      // Se non ci sono dati, mantieni la persona iniziale
+      
+      setIsInitialized(true);
+    };
+
+    loadData();
+  }, [user, loadFamilyTree, isInitialized]);
+
+  // Salva automaticamente su Supabase quando cambiano i dati (con debounce)
+  useEffect(() => {
+    if (!isInitialized || !user) return;
+
+    // Cancella il timeout precedente
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Salva dopo 1 secondo di inattività
+    saveTimeoutRef.current = setTimeout(() => {
+      saveFamilyTree(state.people);
+    }, 1000);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [state.people, isInitialized, user, saveFamilyTree]);
 
   const selectPerson = useCallback((personId: string | null) => {
     setState(prev => ({
@@ -684,6 +734,8 @@ export const useFamilyTree = () => {
     state,
     people: state.people,
     selectedPerson: state.selectedPersonId ? state.people[state.selectedPersonId] : null,
+    loading: dbLoading || !isInitialized,
+    saving,
     selectPerson,
     toggleSidebar,
     openSidebar,

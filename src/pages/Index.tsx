@@ -4,7 +4,7 @@ import { useFamilyTree } from '@/hooks/useFamilyTree';
 import { useAuth } from '@/hooks/useAuth';
 import { FamilyCanvas } from '@/components/FamilyCanvas';
 import { PersonSidebar } from '@/components/PersonSidebar';
-import { TreePine, Users, Download, Upload, PanelRight, PanelRightClose, LogOut } from 'lucide-react';
+import { TreePine, Users, Download, Upload, PanelRight, PanelRightClose, LogOut, Cloud, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -15,6 +15,8 @@ const Index = () => {
   const {
     state,
     selectedPerson,
+    loading,
+    saving,
     selectPerson,
     toggleSidebar,
     closeSidebar,
@@ -74,6 +76,18 @@ const Index = () => {
     }
   };
 
+  // Show loading screen while initializing
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="text-muted-foreground">Caricamento albero genealogico...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Hidden file input */}
@@ -123,6 +137,18 @@ const Index = () => {
             <Users className="w-4 h-4" />
             <span>{Object.keys(state.people).length} persone</span>
           </div>
+          {saving && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Salvataggio...</span>
+            </div>
+          )}
+          {!saving && !loading && (
+            <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+              <Cloud className="w-4 h-4" />
+              <span>Salvato</span>
+            </div>
+          )}
           <div className="h-8 w-px bg-border" />
           <Button
             variant={state.isSidebarOpen ? "default" : "outline"}
