@@ -77,16 +77,21 @@ export const useFamilyTree = () => {
     if (!user || isInitialized) return;
 
     const loadData = async () => {
+      console.log('🔄 Caricamento albero in corso...');
       const loadedPeople = await loadFamilyTree();
+      
+      console.log('📦 Dati caricati:', loadedPeople ? Object.keys(loadedPeople).length + ' persone' : 'nessun dato');
       
       if (loadedPeople && Object.keys(loadedPeople).length > 0) {
         // Carica i dati dal database
+        console.log('✅ Caricamento dati esistenti dal DB');
         setState(prev => ({
           ...prev,
           people: loadedPeople,
         }));
       } else {
         // Se non ci sono dati nel DB, crea la persona iniziale
+        console.log('🆕 Creazione persona iniziale (nessun dato nel DB)');
         const initialPerson = createInitialPerson();
         setState(prev => ({
           ...prev,
@@ -94,13 +99,15 @@ export const useFamilyTree = () => {
         }));
       }
       
-      // Aspetta un momento prima di abilitare il salvataggio automatico
-      // per assicurarsi che i dati siano stati caricati completamente
-      setTimeout(() => {
-        setDataLoaded(true);
-      }, 100);
-      
       setIsInitialized(true);
+      
+      // Aspetta 2 secondi prima di abilitare il salvataggio automatico
+      // Questo garantisce che i dati siano completamente caricati e stabilizzati
+      console.log('⏳ Attesa prima di abilitare salvataggio automatico...');
+      setTimeout(() => {
+        console.log('💾 Salvataggio automatico abilitato');
+        setDataLoaded(true);
+      }, 2000);
     };
 
     loadData();
