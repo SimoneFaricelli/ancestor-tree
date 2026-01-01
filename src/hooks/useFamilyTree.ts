@@ -74,10 +74,11 @@ export const useFamilyTree = () => {
 
   // Carica i dati da Supabase all'avvio
   useEffect(() => {
-    if (!user || isInitialized) return;
+    // Aspetta che l'utente sia completamente caricato con un ID valido
+    if (!user?.id || isInitialized) return;
 
     const loadData = async () => {
-      console.log('🔄 Caricamento albero in corso...');
+      console.log('🔄 Caricamento albero in corso... User ID:', user.id);
       const loadedPeople = await loadFamilyTree();
       
       console.log('📦 Dati caricati:', loadedPeople ? Object.keys(loadedPeople).length + ' persone' : 'nessun dato');
@@ -111,12 +112,12 @@ export const useFamilyTree = () => {
     };
 
     loadData();
-  }, [user, isInitialized]);
+  }, [user?.id, isInitialized]);
 
   // Salva automaticamente su Supabase quando cambiano i dati (con debounce)
   // MA solo dopo che i dati iniziali sono stati caricati
   useEffect(() => {
-    if (!isInitialized || !user || !dataLoaded) return;
+    if (!isInitialized || !user?.id || !dataLoaded) return;
 
     // Cancella il timeout precedente
     if (saveTimeoutRef.current) {
