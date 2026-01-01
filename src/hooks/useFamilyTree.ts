@@ -428,7 +428,7 @@ export const useFamilyTree = () => {
     type: 'parent-child' | 'partner' | 'sibling';
   }> => {
     const visiblePeople = getVisiblePeople();
-    const visibleIds = new Set(visiblePeople.map(p => p.id));
+    const visiblePeopleMap = new Map(visiblePeople.map(p => [p.id, p]));
     const connections: Array<{
       from: Person;
       to: Person;
@@ -439,12 +439,13 @@ export const useFamilyTree = () => {
     visiblePeople.forEach(person => {
       // Parent-child connections
       person.childrenIds.forEach(childId => {
-        if (visibleIds.has(childId)) {
+        const child = visiblePeopleMap.get(childId);
+        if (child) {
           const key = `parent-${person.id}-${childId}`;
           if (!addedConnections.has(key)) {
             connections.push({
               from: person,
-              to: state.people[childId],
+              to: child,
               type: 'parent-child',
             });
             addedConnections.add(key);
@@ -454,12 +455,13 @@ export const useFamilyTree = () => {
 
       // Partner connections
       person.partnerIds.forEach(partnerId => {
-        if (visibleIds.has(partnerId)) {
+        const partner = visiblePeopleMap.get(partnerId);
+        if (partner) {
           const key = [person.id, partnerId].sort().join('-partner-');
           if (!addedConnections.has(key)) {
             connections.push({
               from: person,
-              to: state.people[partnerId],
+              to: partner,
               type: 'partner',
             });
             addedConnections.add(key);
@@ -469,7 +471,7 @@ export const useFamilyTree = () => {
     });
 
     return connections;
-  }, [state, getVisiblePeople]);
+  }, [getVisiblePeople]);
 
   const exportTree = useCallback(() => {
     downloadFamilyTreeJson(state.people);
