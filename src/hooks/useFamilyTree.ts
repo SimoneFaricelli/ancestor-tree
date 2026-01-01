@@ -32,6 +32,7 @@ export const useFamilyTree = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const currentUserIdRef = useRef<string | null>(null);
 
   const [state, setState] = useState<FamilyTreeState>(() => {
     // Inizializziamo con oggetto vuoto, creeremo la persona iniziale solo se necessario
@@ -42,6 +43,32 @@ export const useFamilyTree = () => {
       isSidebarOpen: false,
     };
   });
+
+  // Resetta lo stato quando cambia l'utente (logout/login)
+  useEffect(() => {
+    const userId = user?.id || null;
+    
+    // Se l'utente è cambiato, resetta tutto
+    if (currentUserIdRef.current !== userId) {
+      currentUserIdRef.current = userId;
+      setIsInitialized(false);
+      setDataLoaded(false);
+      
+      // Resetta lo stato
+      setState({
+        people: {},
+        selectedPersonId: null,
+        focusedPersonId: null,
+        isSidebarOpen: false,
+      });
+      
+      // Cancella eventuali salvataggi pendenti
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+    }
+  }, [user?.id]);
 
   // Carica i dati da Supabase all'avvio
   useEffect(() => {

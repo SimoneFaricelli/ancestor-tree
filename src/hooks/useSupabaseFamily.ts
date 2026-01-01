@@ -18,6 +18,12 @@ export function useSupabaseFamily() {
   const [saving, setSaving] = useState(false);
   const { user } = useAuth();
 
+  // Resetta treeId quando cambia l'utente
+  useEffect(() => {
+    setTreeId(null);
+    setLoading(true);
+  }, [user?.id]);
+
   // Carica l'albero genealogico dal database
   const loadFamilyTree = useCallback(async (): Promise<Record<string, Person> | null> => {
     if (!user) {
