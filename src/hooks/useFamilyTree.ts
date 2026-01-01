@@ -299,115 +299,200 @@ export const useFamilyTree = () => {
     const centerY = 1000;
     const horizontalGap = TILE_WIDTH + HORIZONTAL_GAP;
     const verticalGap = TILE_HEIGHT + VERTICAL_GAP;
+    const minSpacing = horizontalGap;
+
+    // Map per tracciare la larghezza di ogni sotto-albero
+    const subtreeWidths = new Map<string, number>();
+    const processed = new Set<string>();
+
+    /**
+     * Calcola la larghezza di un sotto-albero (verso l'alto - antenati)
+     * La larghezza è il numero totale di "slot" orizzontali necessari
+     */
+    const calculateAncestorWidth = (personId: string): number => {
+      if (subtreeWidths.has(personId + '_ancestor')) {
+        return subtreeWidths.get(personId + '_ancestor')!;
+      }
+
+      const person = people[personId];
+      if (!person || person.parentIds.length === 0) {
+        subtreeWidths.set(personId + '_ancestor', 1);
+        return 1;
+      }
+
+      // Calcola la larghezza totale dei genitori e dei loro antenati
+      let totalWidth = 0;
+      person.parentIds.forEach(parentId => {
+        const parentWidth = calculateAncestorWidth(parentId);
+        totalWidth += parentWidth;
+      });
+
+      // La larghezza è almeno quella dei genitori
+      const width = Math.max(totalWidth, 1);
+      subtreeWidths.set(personId + '_ancestor', width);
+      return width;
+    };
+
+    /**
+     * Calcola la larghezza di un sotto-albero (verso il basso - discendenti)
+     * La larghezza è il numero totale di "slot" orizzontali necessari
+     */
+    const calculateDescendantWidth = (personId: string): number => {
+      if (subtreeWidths.has(personId + '_descendant')) {
+        return subtreeWidths.get(personId + '_descendant')!;
+      }
+
+      const person = people[personId];
+      if (!person || person.childrenIds.length === 0) {
+        subtreeWidths.set(personId + '_descendant', 1);
+        return 1;
+      }
+
+      // Calcola la larghezza totale dei figli e dei loro discendenti
+      let totalWidth = 0;
+      person.childrenIds.forEach(childId => {
+        const childWidth = calculateDescendantWidth(childId);
+        totalWidth += childWidth;
+      });
+
+      // La larghezza è almeno quella dei figli
+      const width = Math.max(totalWidth, 1);
+      subtreeWidths.set(personId + '_descendant', width);
+      return width;
+    };
+
+    /**
+     * Posiziona gli antenati (genitori) in modo centrato e ricorsivo
+     * @param personId ID della persona di cui posizionare i genitori
+     * @param childX Posizione X del figlio (per centrare i genitori)
+     * @param level Livello di profondità
+     */
+    const positionAncestors = (personId: string, childX: number, level: number) => {
+      const person = people[personId];
+      if (!person || person.parentIds.length === 0) return;
+
+      const parentIds = person.parentIds;
+      const parentCount = parentIds.length;
+
+      // Calcola la larghezza totale necessaria per tutti i genitori e i loro antenati
+      const parentWidths = parentIds.map(parentId => calculateAncestorWidth(parentId));
+      const totalWidth = parentWidths.reduce((sum, w) => sum + w, 0);
+      
+      // Calcola la spaziatura dinamica basata sulla larghezza dei sotto-alberi
+      const spacing = minSpacing * Math.max(1, totalWidth / parentCount);
+
+      // Calcola la posizione di partenza per centrare i genitori rispetto al figlio
+      const totalSpan = (parentCount - 1) * spacing;
+      let currentX = childX - totalSpan / 2;
+
+      parentIds.forEach((parentId, index) => {
+        if (!positions.has(parentId)) {
+          const parentWidth = parentWidths[index];
+          const parentSpacing = spacing * (parentWidth / Math.max(1, totalWidth / parentCount));
+          
+          const x = currentX;
+          const y = centerY - verticalGap * level;
+          
+          positions.set(parentId, { x, y });
+          
+          // Posiziona ricorsivamente gli antenati di questo genitore
+          positionAncestors(parentId, x, level + 1);
+          
+          // Aggiorna la posizione X per il prossimo genitore
+          currentX += parentSpacing;
+        }
+      });
+    };
+
+    /**
+     * Posiziona i discendenti (figli) in modo centrato e ricorsivo
+     * @param personId ID della persona di cui posizionare i figli
+     * @param parentX Posizione X del genitore (per centrare i figli)
+     * @param level Livello di profondità
+     */
+    const positionDescendants = (personId: string, parentX: number, level: number) => {
+      const person = people[personId];
+      if (!person || person.childrenIds.length === 0) return;
+
+      const childIds = person.childrenIds;
+      const childCount = childIds.length;
+
+      // Calcola la larghezza totale necessaria per tutti i figli e i loro discendenti
+      const childWidths = childIds.map(childId => calculateDescendantWidth(childId));
+      const totalWidth = childWidths.reduce((sum, w) => sum + w, 0);
+      
+      // Calcola la spaziatura dinamica basata sulla larghezza dei sotto-alberi
+      const spacing = minSpacing * Math.max(1, totalWidth / childCount);
+
+      // Calcola la posizione di partenza per centrare i figli rispetto al genitore
+      const totalSpan = (childCount - 1) * spacing;
+      let currentX = parentX - totalSpan / 2;
+
+      childIds.forEach((childId, index) => {
+        if (!positions.has(childId)) {
+          const childWidth = childWidths[index];
+          const childSpacing = spacing * (childWidth / Math.max(1, totalWidth / childCount));
+          
+          const x = currentX;
+          const y = centerY + verticalGap * level;
+          
+          positions.set(childId, { x, y });
+          
+          // Posiziona ricorsivamente i discendenti di questo figlio
+          positionDescendants(childId, x, level + 1);
+          
+          // Aggiorna la posizione X per il prossimo figlio
+          currentX += childSpacing;
+        }
+      });
+    };
 
     // Set focused person at center
     positions.set(focusedId, { x: centerX, y: centerY });
 
-    // Position partners to the left
-    focused.partnerIds.forEach((partnerId, index) => {
-      positions.set(partnerId, {
-        x: centerX - horizontalGap * (index + 1),
-        y: centerY,
-      });
-    });
-
-    // Position siblings to the right
-    focused.siblingIds.forEach((siblingId, index) => {
-      positions.set(siblingId, {
-        x: centerX + horizontalGap * (index + 1),
-        y: centerY,
-      });
-    });
-
-    // Track used positions at each level to avoid overlaps
-    const usedPositionsByLevel = new Map<number, Set<number>>();
-    
-    const getAvailableX = (level: number, preferredX: number): number => {
-      if (!usedPositionsByLevel.has(level)) {
-        usedPositionsByLevel.set(level, new Set());
-      }
-      const usedPositions = usedPositionsByLevel.get(level)!;
+    // Position partners to the left (centrati se sono più di uno)
+    if (focused.partnerIds.length > 0) {
+      const partnerCount = focused.partnerIds.length;
+      const partnerTotalSpan = (partnerCount - 1) * horizontalGap;
+      let partnerX = centerX - horizontalGap - partnerTotalSpan / 2;
       
-      // Round to nearest slot
-      let slotX = Math.round(preferredX / horizontalGap) * horizontalGap;
-      
-      // Find available position
-      while (usedPositions.has(slotX)) {
-        slotX += horizontalGap;
-      }
-      
-      usedPositions.add(slotX);
-      return slotX;
-    };
-
-    // Position ancestors upward - handle multiple ancestry lines
-    const positionAncestors = (personId: string, level: number, baseX: number) => {
-      const person = people[personId];
-      if (!person) return;
-
-      const parentIds = person.parentIds;
-      const parentCount = parentIds.length;
-      const startX = baseX - ((parentCount - 1) * horizontalGap) / 2;
-
-      parentIds.forEach((parentId, index) => {
-        if (!positions.has(parentId)) {
-          const preferredX = startX + index * horizontalGap;
-          const x = getAvailableX(-level, preferredX);
-          const y = centerY - verticalGap * level;
-          positions.set(parentId, { x, y });
-          positionAncestors(parentId, level + 1, x);
-        }
+      focused.partnerIds.forEach((partnerId, index) => {
+        positions.set(partnerId, {
+          x: partnerX,
+          y: centerY,
+        });
+        
+        // Posiziona gli antenati di ogni partner
+        positionAncestors(partnerId, partnerX, 1);
+        
+        partnerX += horizontalGap;
       });
-    };
+    }
 
-    // Position descendants downward
-    const positionDescendants = (personId: string, level: number, baseX: number) => {
-      const person = people[personId];
-      if (!person) return;
-
-      const childIds = person.childrenIds;
-      const childCount = childIds.length;
-      const startX = baseX - ((childCount - 1) * horizontalGap) / 2;
-
-      childIds.forEach((childId, index) => {
-        if (!positions.has(childId)) {
-          const preferredX = startX + index * horizontalGap;
-          const x = getAvailableX(level, preferredX);
-          const y = centerY + verticalGap * level;
-          positions.set(childId, { x, y });
-          positionDescendants(childId, level + 1, x);
-        }
+    // Position siblings to the right (centrati se sono più di uno)
+    if (focused.siblingIds.length > 0) {
+      const siblingCount = focused.siblingIds.length;
+      const siblingTotalSpan = (siblingCount - 1) * horizontalGap;
+      let siblingX = centerX + horizontalGap - siblingTotalSpan / 2;
+      
+      focused.siblingIds.forEach((siblingId, index) => {
+        positions.set(siblingId, {
+          x: siblingX,
+          y: centerY,
+        });
+        
+        // Posiziona i discendenti di ogni fratello/sorella
+        positionDescendants(siblingId, siblingX, 1);
+        
+        siblingX += horizontalGap;
       });
-    };
+    }
 
-    // First position the focused person's ancestors
-    positionAncestors(focusedId, 1, centerX);
+    // Posiziona gli antenati della persona selezionata
+    positionAncestors(focusedId, centerX, 1);
     
-    // Then position partners' ancestors with offset to avoid overlap
-    focused.partnerIds.forEach((partnerId, partnerIndex) => {
-      const partner = people[partnerId];
-      if (partner) {
-        const partnerPos = positions.get(partnerId);
-        if (partnerPos) {
-          // Position partner's ancestors starting from partner's position
-          const partnerParentIds = partner.parentIds;
-          const partnerParentCount = partnerParentIds.length;
-          const partnerStartX = partnerPos.x - ((partnerParentCount - 1) * horizontalGap) / 2;
-          
-          partnerParentIds.forEach((parentId, index) => {
-            if (!positions.has(parentId)) {
-              const preferredX = partnerStartX + index * horizontalGap;
-              const x = getAvailableX(-1, preferredX);
-              const y = centerY - verticalGap;
-              positions.set(parentId, { x, y });
-              positionAncestors(parentId, 2, x);
-            }
-          });
-        }
-      }
-    });
-    
-    positionDescendants(focusedId, 1, centerX);
+    // Posiziona i discendenti della persona selezionata
+    positionDescendants(focusedId, centerX, 1);
 
     return positions;
   }, [state]);
