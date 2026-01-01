@@ -51,22 +51,24 @@ export const useFamilyTree = () => {
     // Se l'utente è cambiato, resetta tutto
     if (currentUserIdRef.current !== userId) {
       currentUserIdRef.current = userId;
-      setIsInitialized(false);
-      setDataLoaded(false);
       
-      // Resetta lo stato
-      setState({
-        people: {},
-        selectedPersonId: null,
-        focusedPersonId: null,
-        isSidebarOpen: false,
-      });
-      
-      // Cancella eventuali salvataggi pendenti
+      // Cancella eventuali salvataggi pendenti PRIMA di resettare
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = null;
       }
+      
+      setIsInitialized(false);
+      setDataLoaded(false);
+      
+      // Resetta lo stato - ma NON settiamo people vuoto qui
+      // Lo faremo solo dopo il caricamento
+      setState(prev => ({
+        ...prev,
+        selectedPersonId: null,
+        focusedPersonId: null,
+        isSidebarOpen: false,
+      }));
     }
   }, [user?.id]);
 
@@ -92,12 +94,17 @@ export const useFamilyTree = () => {
         }));
       }
       
-      setDataLoaded(true);
+      // Aspetta un momento prima di abilitare il salvataggio automatico
+      // per assicurarsi che i dati siano stati caricati completamente
+      setTimeout(() => {
+        setDataLoaded(true);
+      }, 100);
+      
       setIsInitialized(true);
     };
 
     loadData();
-  }, [user, loadFamilyTree, isInitialized]);
+  }, [user, isInitialized]);
 
   // Salva automaticamente su Supabase quando cambiano i dati (con debounce)
   // MA solo dopo che i dati iniziali sono stati caricati
