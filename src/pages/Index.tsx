@@ -1,13 +1,17 @@
 import { useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useFamilyTree } from '@/hooks/useFamilyTree';
+import { useAuth } from '@/hooks/useAuth';
 import { FamilyCanvas } from '@/components/FamilyCanvas';
 import { PersonSidebar } from '@/components/PersonSidebar';
-import { TreePine, Users, Download, Upload, PanelRight, PanelRightClose } from 'lucide-react';
+import { TreePine, Users, Download, Upload, PanelRight, PanelRightClose, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
 const Index = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
   const {
     state,
     selectedPerson,
@@ -32,6 +36,16 @@ const Index = () => {
   const handleExport = () => {
     exportTree();
     toast.success('Albero genealogico esportato!');
+  };
+
+  const handleLogout = async () => {
+    const { error } = await signOut();
+    if (!error) {
+      navigate('/login');
+      toast.success('Disconnesso con successo');
+    } else {
+      toast.error('Errore durante la disconnessione');
+    }
   };
 
   const handleImportClick = () => {
@@ -109,6 +123,7 @@ const Index = () => {
             <Users className="w-4 h-4" />
             <span>{Object.keys(state.people).length} persone</span>
           </div>
+          <div className="h-8 w-px bg-border" />
           <Button
             variant={state.isSidebarOpen ? "default" : "outline"}
             size="sm"
@@ -128,6 +143,15 @@ const Index = () => {
                 Dettagli
               </>
             )}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
+            className="gap-2"
+            title="Esci"
+          >
+            <LogOut className="w-4 h-4" />
           </Button>
         </div>
       </header>
