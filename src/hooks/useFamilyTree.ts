@@ -79,7 +79,7 @@ export const useFamilyTree = () => {
 
     const loadData = async () => {
       console.log('🔄 Caricamento albero in corso... User ID:', user.id);
-      const loadedPeople = await loadFamilyTree();
+      const loadedPeople = await loadFamilyTree(user.id);
       
       console.log('📦 Dati caricati:', loadedPeople ? Object.keys(loadedPeople).length + ' persone' : 'nessun dato');
       

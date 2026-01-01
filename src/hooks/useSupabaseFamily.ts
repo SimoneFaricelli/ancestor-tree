@@ -26,20 +26,22 @@ export function useSupabaseFamily() {
   }, [user?.id]);
 
   // Carica l'albero genealogico dal database
-  const loadFamilyTree = useCallback(async (): Promise<Record<string, Person> | null> => {
-    if (!user) {
-      console.log('❌ [DB] Nessun utente loggato');
+  const loadFamilyTree = useCallback(async (userId?: string): Promise<Record<string, Person> | null> => {
+    const effectiveUserId = userId || user?.id;
+    
+    if (!effectiveUserId) {
+      console.log('❌ [DB] Nessun utente loggato. userId param:', userId, '| user?.id:', user?.id);
       setLoading(false);
       return null;
     }
 
     try {
       setLoading(true);
-      console.log('🔍 [DB] Query database per user_id:', user.id);
+      console.log('🔍 [DB] Query database per user_id:', effectiveUserId);
       const { data, error } = await supabase
         .from('ancestor_trees')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', effectiveUserId)
         .single();
 
       if (error) {
