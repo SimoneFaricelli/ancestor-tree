@@ -47,7 +47,17 @@ export const ConnectionLines = ({ connections, focusedPersonId }: ConnectionLine
   };
 
   return (
-    <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
+    <svg 
+      className="absolute pointer-events-none" 
+      style={{ 
+        zIndex: 0, 
+        left: 0, 
+        top: 0, 
+        width: '6000px', 
+        height: '4000px',
+        overflow: 'visible'
+      }}
+    >
       <defs>
         <filter id="glow">
           <feGaussianBlur stdDeviation="2" result="coloredBlur" />

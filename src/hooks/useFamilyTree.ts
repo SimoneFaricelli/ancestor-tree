@@ -319,7 +319,28 @@ export const useFamilyTree = () => {
       });
     });
 
-    // Position ancestors upward
+    // Track used positions at each level to avoid overlaps
+    const usedPositionsByLevel = new Map<number, Set<number>>();
+    
+    const getAvailableX = (level: number, preferredX: number): number => {
+      if (!usedPositionsByLevel.has(level)) {
+        usedPositionsByLevel.set(level, new Set());
+      }
+      const usedPositions = usedPositionsByLevel.get(level)!;
+      
+      // Round to nearest slot
+      let slotX = Math.round(preferredX / horizontalGap) * horizontalGap;
+      
+      // Find available position
+      while (usedPositions.has(slotX)) {
+        slotX += horizontalGap;
+      }
+      
+      usedPositions.add(slotX);
+      return slotX;
+    };
+
+    // Position ancestors upward - handle multiple ancestry lines
     const positionAncestors = (personId: string, level: number, baseX: number) => {
       const person = people[personId];
       if (!person) return;
@@ -330,7 +351,8 @@ export const useFamilyTree = () => {
 
       parentIds.forEach((parentId, index) => {
         if (!positions.has(parentId)) {
-          const x = startX + index * horizontalGap;
+          const preferredX = startX + index * horizontalGap;
+          const x = getAvailableX(-level, preferredX);
           const y = centerY - verticalGap * level;
           positions.set(parentId, { x, y });
           positionAncestors(parentId, level + 1, x);
@@ -349,7 +371,8 @@ export const useFamilyTree = () => {
 
       childIds.forEach((childId, index) => {
         if (!positions.has(childId)) {
-          const x = startX + index * horizontalGap;
+          const preferredX = startX + index * horizontalGap;
+          const x = getAvailableX(level, preferredX);
           const y = centerY + verticalGap * level;
           positions.set(childId, { x, y });
           positionDescendants(childId, level + 1, x);
@@ -357,7 +380,33 @@ export const useFamilyTree = () => {
       });
     };
 
+    // First position the focused person's ancestors
     positionAncestors(focusedId, 1, centerX);
+    
+    // Then position partners' ancestors with offset to avoid overlap
+    focused.partnerIds.forEach((partnerId, partnerIndex) => {
+      const partner = people[partnerId];
+      if (partner) {
+        const partnerPos = positions.get(partnerId);
+        if (partnerPos) {
+          // Position partner's ancestors starting from partner's position
+          const partnerParentIds = partner.parentIds;
+          const partnerParentCount = partnerParentIds.length;
+          const partnerStartX = partnerPos.x - ((partnerParentCount - 1) * horizontalGap) / 2;
+          
+          partnerParentIds.forEach((parentId, index) => {
+            if (!positions.has(parentId)) {
+              const preferredX = partnerStartX + index * horizontalGap;
+              const x = getAvailableX(-1, preferredX);
+              const y = centerY - verticalGap;
+              positions.set(parentId, { x, y });
+              positionAncestors(parentId, 2, x);
+            }
+          });
+        }
+      }
+    });
+    
     positionDescendants(focusedId, 1, centerX);
 
     return positions;
