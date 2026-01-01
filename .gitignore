@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+DATABASE_INTEGRATION.md
+SUPABASE_SETUP.md

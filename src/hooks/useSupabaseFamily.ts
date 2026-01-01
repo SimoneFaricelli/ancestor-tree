@@ -18,10 +18,11 @@ export function useSupabaseFamily() {
   const [saving, setSaving] = useState(false);
   const { user } = useAuth();
 
-  // Resetta treeId quando cambia l'utente
+  // Resetta treeId quando cambia l'utente (ma NON il loading)
   useEffect(() => {
-    setTreeId(null);
-    setLoading(true);
+    if (user) {
+      setTreeId(null);
+    }
   }, [user?.id]);
 
   // Carica l'albero genealogico dal database
@@ -68,8 +69,8 @@ export function useSupabaseFamily() {
     try {
       setSaving(true);
 
+      // Se abbiamo già un treeId, aggiorna
       if (treeId) {
-        // Aggiorna l'albero esistente
         const { error } = await supabase
           .from('ancestor_trees')
           .update({
@@ -81,20 +82,46 @@ export function useSupabaseFamily() {
 
         if (error) throw error;
       } else {
-        // Crea un nuovo albero
-        const { data, error } = await supabase
+        // Prima controlla se esiste già un record per questo utente
+        const { data: existingTree, error: checkError } = await supabase
           .from('ancestor_trees')
-          .insert({
-            user_id: user.id,
-            name: 'Il mio albero genealogico',
-            people,
-          })
-          .select()
+          .select('id')
+          .eq('user_id', user.id)
           .single();
 
-        if (error) throw error;
-        if (data) {
-          setTreeId(data.id);
+        if (checkError && checkError.code !== 'PGRST116') {
+          throw checkError;
+        }
+
+        if (existingTree) {
+          // Esiste già, aggiorna quello
+          setTreeId(existingTree.id);
+          const { error } = await supabase
+            .from('ancestor_trees')
+            .update({
+              people,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existingTree.id)
+            .eq('user_id', user.id);
+
+          if (error) throw error;
+        } else {
+          // Non esiste, crea un nuovo albero
+          const { data, error } = await supabase
+            .from('ancestor_trees')
+            .insert({
+              user_id: user.id,
+              name: 'Il mio albero genealogico',
+              people,
+            })
+            .select()
+            .single();
+
+          if (error) throw error;
+          if (data) {
+            setTreeId(data.id);
+          }
         }
       }
 
