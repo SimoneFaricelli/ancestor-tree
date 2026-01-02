@@ -9,6 +9,13 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    // Configurazione per gestire le route SPA
+    historyApiFallback: true,
+  },
+  preview: {
+    port: 8080,
+    // Configurazione per gestire le route SPA anche in preview
+    historyApiFallback: true,
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
